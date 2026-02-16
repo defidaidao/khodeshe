@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DefiDaiDao | BSC Dashboard</title>
+    <style>
+        :root {
+            --binance-yellow: #F3BA2F;
+            --dai-yellow: #F5AC37;
+            --bg-dark: #0B0E11; /* Binance Dark Theme */
+            --card-bg: #1E2329;
+            --text-main: #EAECEF;
+            --text-dim: #848E9C;
+            --success: #02C076;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'BinancePlex', 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--binance-yellow);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        #connectBtn {
+            background-color: var(--binance-yellow);
+            color: #000;
+        }
+
+        #connectBtn:hover { background-color: #fbc02d; }
+
+        .section-title {
+            text-align: left;
+            font-size: 0.75rem;
+            color: var(--binance-yellow);
+            text-transform: uppercase;
+            margin: 20px 0 10px 0;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .input-wrapper {
+            background: #2B3139;
+            border: 1px solid #474D57;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            outline: none;
+            font-family: monospace;
+        }
+
+        .action-btn {
+            background: #474D57;
+            color: var(--text-dim);
+            cursor: not-allowed;
+        }
+
+        .action-btn.active {
+            background-color: var(--binance-yellow);
+            color: #000;
+            cursor: pointer;
+        }
+
+        .reward-btn {
+            background: transparent;
+            color: var(--binance-yellow);
+            border: 1px solid var(--binance-yellow);
+            display: none;
+        }
+
+        .reward-btn:hover { background: rgba(243, 186, 47, 0.1); }
+
+        .info-btn {
+            background: #2B3139;
+            color: var(--text-main);
+            display: none;
+        }
+
+        #infoDisplay {
+            margin-top: 15px;
+            background: #2B3139;
+            border-radius: 12px;
+            padding: 15px;
+            display: none;
+            text-align: left;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #474D57;
+            font-size: 0.9rem;
+        }
+
+        .stat-label { color: var(--text-dim); }
+        .stat-value { color: var(--binance-yellow); font-weight: bold; }
+
+        #status {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .dai-logo {
+            width: 24px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>DefiDaiDao</h2>
+    <p class="subtitle">Powered by Binance Smart Chain</p>
+
+    <button id="connectBtn" class="btn">Connect Wallet</button>
+
+    <div class="section-title">Registration</div>
+    <div class="input-wrapper">
+        <input type="text" id="uplineInput" placeholder="Sponsor Address (0x...)">
+    </div>
+    <button id="approveBtn" class="btn action-btn" disabled>Approve DAI</button>
+    <button id="registerBtn" class="btn action-btn" disabled>Register Now</button>
+
+    <div class="section-title">User Dashboard</div>
+    <button id="rewardBtn" class="btn reward-btn">🎁 Claim My Rewards</button>
+    <button id="infoBtn" class="btn info-btn">📊 Global Stats</button>
+
+    <div id="infoDisplay">
+        <div class="stat-row"><span class="stat-label">Member ID</span> <span class="stat-value" id="val-id">-</span></div>
+        <div class="stat-row">
+            <span class="stat-label">Team Count</span>
+            <span class="stat-value"><span id="val-left">0</span> L / <span id="val-right">0</span> R</span>
+        </div>
+        <div class="stat-row"><span class="stat-label">Network Status</span> <span class="stat-value" id="val-sync">Checking...</span></div>
+    </div>
+
+    <div id="status">Ready to connect</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script>
+    const CONTRACT_ADDRESS = "0x84a47446f7a563Ce899aE991127b20FB8E20cEca";
+    const DAI_ADDRESS = "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3";
+    const BSC_CHAIN_ID = '0x38';
+
+    let signer, tokenContract, mainContract;
+
+    const connectBtn = document.getElementById('connectBtn');
+    const approveBtn = document.getElementById('approveBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const rewardBtn = document.getElementById('rewardBtn');
+    const infoBtn = document.getElementById('infoBtn');
+    const statusText = document.getElementById('status');
+
+    async function switchNetwork() {
+        try {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BSC_CHAIN_ID }] });
+        } catch (err) {
+            if (err.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: BSC_CHAIN_ID,
+                        chainName: 'BSC',
+                        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                        blockExplorerUrls: ['https://bscscan.com/']
+                    }]
+                });
+            }
+        }
+    }
+
+    connectBtn.onclick = async () => {
+        if (window.ethereum) {
+            try {
+                await switchNetwork();
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                
+                connectBtn.innerText = "Connected ✅";
+                connectBtn.style.backgroundColor = "#2B3139";
+                connectBtn.style.color = "#F3BA2F";
+                
+                approveBtn.disabled = false;
+                approveBtn.classList.add('active');
+                rewardBtn.style.display = "block";
+                infoBtn.style.display = "block";
+
+                tokenContract = new ethers.Contract(DAI_ADDRESS, ["function approve(address s, uint256 a) public returns (bool)"], signer);
+                mainContract = new ethers.Contract(CONTRACT_ADDRESS, [
+                    "function step_2_become_owner(address _target) external",
+                    "function reward() external",
+                    "function Owner_Info_Global(address _u) external view returns (uint64 ID, uint32 All_Left, uint32 All_Right, uint32 Save, uint32 Left_Remaining, uint32 Right_Remaining, address UpLine_Address, address Left_Child, address Right_Child, bool Sync_Complete)"
+                ], signer);
+                statusText.innerText = "Account ready for DApp interaction";
+            } catch (err) { statusText.innerText = "Wallet access denied"; }
+        }
+    };
+
+    approveBtn.onclick = async () => {
+        try {
+            await switchNetwork();
+            statusText.innerText = "Sign DAI Approval in your wallet...";
+            const tx = await tokenContract.approve(CONTRACT_ADDRESS, ethers.parseUnits("1", 18));
+            await tx.wait();
+            approveBtn.innerText = "DAI Approved ✅";
+            approveBtn.classList.remove('active');
+            registerBtn.classList.add('active');
+            registerBtn.disabled = false;
+            statusText.innerText = "Approved! Now you can Register.";
+        } catch (err) { statusText.innerText = "Transaction Rejected"; }
+    };
+
+    registerBtn.onclick = async () => {
+        const upline = document.getElementById('uplineInput').value.trim();
+        if(!ethers.isAddress(upline)) return alert("Please enter a valid BSC address!");
+        try {
+            await switchNetwork();
+            statusText.innerText = "Confirming registration...";
+            const tx = await mainContract.step_2_become_owner(upline);
+            await tx.wait();
+            registerBtn.innerText = "Registered ✅";
+            statusText.innerText = "Welcome to DefiDaiDao Community!";
+        } catch (err) { statusText.innerText = "Registration failed"; }
+    };
+
+    rewardBtn.onclick = async () => {
+        try {
+            await switchNetwork();
+            statusText.innerText = "Requesting Rewards...";
+            const tx = await mainContract.reward();
+            await tx.wait();
+            statusText.innerText = "Success! Check your wallet.";
+        } catch (err) { statusText.innerText = "Claim failed: No rewards found"; }
+    };
+
+    infoBtn.onclick = async () => {
+        try {
+            const userAddr = await signer.getAddress();
+            const info = await mainContract.Owner_Info_Global(userAddr);
+            document.getElementById('infoDisplay').style.display = "block";
+            document.getElementById('val-id').innerText = "#" + info.ID.toString();
+            document.getElementById('val-left').innerText = info.All_Left.toString();
+            document.getElementById('val-right').innerText = info.All_Right.toString();
+            document.getElementById('val-sync').innerText = info.Sync_Complete ? "Synced ✅" : "Active";
+            statusText.innerText = "Data refreshed from BSC";
+        } catch (err) { statusText.innerText = "Error: Account not registered"; }
+    };
+</script>
+</body>
+</html>
